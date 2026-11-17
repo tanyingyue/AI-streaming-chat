@@ -1,0 +1,19 @@
+{
+  "name": "ai-stream-chat",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Vue3 + Node 对话式 AI 学习项目：SSE 流式、停止生成、Tool 卡片、业务订单助手",
+  "scripts": {
+    "install:all": "npm install && npm install --prefix server && npm install --prefix client",
+    "dev": "concurrently -n 后端,前端 -c blue,green \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
+    "dev:server": "npm run dev --prefix server",
+    "dev:client": "npm run dev --prefix client",
+    "build:client": "npm run build --prefix client"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

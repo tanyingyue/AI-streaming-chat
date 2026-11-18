@@ -4,12 +4,18 @@ import cors from 'cors'
 import { initSse, sleep } from './sse.js'
 import { TOOL_DEFINITIONS, executeTool } from './tools.js'
 import { getOrder } from './orders.js'
+import { openApiSpec } from './openapi.js'
 
 const app = express()
 const PORT = process.env.PORT || 3001
 
 app.use(cors())
 app.use(express.json({ limit: '1mb' }))
+
+// OpenAPI JSON，供 Apifox 导入
+app.get('/api-docs.json', (_req, res) => {
+  res.json(openApiSpec)
+})
 
 const feedbackStore = []
 
@@ -124,6 +130,8 @@ async function runWithLlm({ messages, sse, isClosed }) {
   for (let step = 0; step < 3; step++) {
     if (isClosed()) return
 
+    console.log('[llm] step=%d 请求模型 model=%s messages=%d', step, model, apiMessages.length)
+
     const response = await fetch(`${baseUrl}/chat/completions`, {
       method: 'POST',
       headers: {
@@ -205,8 +213,17 @@ async function runWithLlm({ messages, sse, isClosed }) {
       }
     }
 
+    const toolNames = [...toolCalls.values()].map((c) => c.name).filter(Boolean)
+    console.log(
+      '[llm] step=%d 模型返回 textLen=%d tool_calls=%d %s',
+      step,
+      assistantText.length,
+      toolCalls.size,
+      toolNames.length ? toolNames.join(',') : '(无)'
+    )
+
     if (toolCalls.size === 0) {
-      // 纯文本结束
+      console.log('[llm] step=%d 无工具调用，决策循环结束', step)
       return
     }
 
@@ -226,10 +243,12 @@ async function runWithLlm({ messages, sse, isClosed }) {
         args = {}
       }
 
+      console.log('[llm] step=%d 执行工具 %s args=%j', step, call.name, args)
       sse.toolStart({ id: call.id, name: call.name, args })
       const result = await executeTool(call.name, args)
       if (isClosed()) return
       sse.toolEnd({ id: call.id, name: call.name, result })
+      console.log('[llm] step=%d 工具完成 %s found=%s', step, call.name, result?.found)
 
       assistantToolMsg.tool_calls.push({
         id: call.id,
@@ -248,7 +267,10 @@ async function runWithLlm({ messages, sse, isClosed }) {
     }
 
     apiMessages.push(assistantToolMsg, ...toolResultMsgs)
+    console.log('[llm] step=%d 工具结果已回填，进入下一轮', step)
   }
+
+  console.log('[llm] 已达最大步数 3，结束循环')
 }
 
 // 给前端详情页用的只读接口（演示「结果可跳转业务页」）
@@ -259,4 +281,5 @@ app.get('/api/orders/:id', (req, res) => {
 app.listen(PORT, () => {
   console.log(`[server] http://localhost:${PORT}`)
   console.log(`[server] mode = ${process.env.LLM_API_KEY ? 'llm' : 'mock'}`)
+  console.log(`[server] OpenAPI http://localhost:${PORT}/api-docs.json`)
 })

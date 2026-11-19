@@ -24,7 +24,7 @@ export const TOOL_DEFINITIONS = [
 /** 服务端真正执行 tool（权限/数据只在这里碰） */
 export async function executeTool(name, args = {}) {
   if (name === 'getOrder') {
-    return getOrder(args.orderId)
+    return await getOrder(args.orderId)
   }
   return { error: `未知工具: ${name}` }
 }

@@ -274,8 +274,8 @@ async function runWithLlm({ messages, sse, isClosed }) {
 }
 
 // 给前端详情页用的只读接口（演示「结果可跳转业务页」）
-app.get('/api/orders/:id', (req, res) => {
-  res.json(getOrder(req.params.id))
+app.get('/api/orders/:id', async (req, res) => {
+  res.json(await getOrder(req.params.id))
 })
 
 app.listen(PORT, () => {
